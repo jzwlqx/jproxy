@@ -1,8 +1,38 @@
-*.class
-.classpath
-.project
+# maven ignore
+target/
+_build/
 
-# Package Files #
+# eclipse ignore
+.settings/
+.project
+.classpath
+
+# idea ignore
+.idea/
+*.ipr
+*.iml
+*.iws
+
+# Package Files
 *.jar
 *.war
 *.ear
+
+# temp ignore
+*.log.*
+*.log
+*.cache
+*.diff
+*.patch
+*.tmp
+*.bak
+*.bkp
+*.swp
+~$*
+
+# mac folder config file
+.DS_Store
+# windows image file caches
+Thumbs.db
+# windows folder config file
+Desktop.ini
