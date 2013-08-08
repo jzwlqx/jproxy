@@ -29,7 +29,6 @@ public class ProxyServer {
             System.out.println("request: " + s.getRemoteSocketAddress());
             Thread t = new ProxyThread(s);
             t.start();
-
         }
         //new ProxyThread(serverSocket.accept()).start();
         //serverSocket.close();
