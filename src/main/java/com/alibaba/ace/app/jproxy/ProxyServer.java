@@ -25,12 +25,11 @@ public class ProxyServer {
         }
 
         while (true) {
+            //TODO 使用nio reactor模式
             Socket s = serverSocket.accept();
             System.out.println("request: " + s.getRemoteSocketAddress());
             Thread t = new ProxyThread(s);
             t.start();
         }
-        //new ProxyThread(serverSocket.accept()).start();
-        //serverSocket.close();
     }
 }

@@ -1,7 +1,14 @@
 package com.alibaba.ace.app.jproxy.handler;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import com.alibaba.ace.app.jproxy.connection.HttpConnection;
 import com.alibaba.ace.app.jproxy.model.HttpRequest;
 import com.alibaba.ace.app.jproxy.model.Proxy;
 
@@ -10,8 +17,10 @@ import com.alibaba.ace.app.jproxy.model.Proxy;
  * 
  * @author jjz
  */
-public class SimpleRequestHandler implements RequestHandler {
-    private Proxy proxy;
+public class SimpleRequestHandler extends AbstractRequestHandler {
+    private static Log log = LogFactory.getLog(SimpleRequestHandler.class);
+
+    private Proxy      proxy;
 
     public SimpleRequestHandler() {
 
@@ -22,8 +31,12 @@ public class SimpleRequestHandler implements RequestHandler {
     }
 
     @Override
-    public void handle(HttpRequest req, OutputStream os) {
-
+    protected void process(HttpRequest req, OutputStream os) throws IOException {
+        HttpConnection con = new HttpConnection(req, proxy);
+        con.connect();
+        con.sendRequest();
+        InputStream is = con.getInputStream();
+        IOUtils.copy(is, os);
     }
 
 }

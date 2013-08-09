@@ -8,7 +8,7 @@ package com.alibaba.ace.app.jproxy.model;
 public class Proxy {
 
     private String host;
-    private String port;
+    private int    port;
 
     public String getHost() {
         return host;
@@ -18,11 +18,11 @@ public class Proxy {
         this.host = host;
     }
 
-    public String getPort() {
+    public int getPort() {
         return port;
     }
 
-    public void setPort(String port) {
+    public void setPort(int port) {
         this.port = port;
     }
 
