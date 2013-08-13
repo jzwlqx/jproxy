@@ -10,12 +10,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.alibaba.ace.app.jproxy.connection.HttpConnection;
+import com.alibaba.ace.app.jproxy.connection.HttpsConnection;
 import com.alibaba.ace.app.jproxy.exception.BadRequestException;
 import com.alibaba.ace.app.jproxy.model.HttpMessage;
 import com.alibaba.ace.app.jproxy.model.HttpRequest;
 import com.alibaba.ace.app.jproxy.model.HttpResponse;
 import com.alibaba.ace.app.jproxy.model.Proxy;
 import com.alibaba.ace.app.jproxy.parser.HttpRequestParser;
+import com.alibaba.ace.app.jproxy.route.ProxySelector;
 
 public class ProxyThread extends Thread {
 
@@ -86,9 +88,10 @@ public class ProxyThread extends Thread {
     }
 
     private void process(HttpRequest req) throws IOException {
-        Proxy proxy = null;
+        Proxy proxy = ProxySelector.select(req.getUrl());
+
         if (req.getMethod().equals("CONNECT")) {
-            throw new RuntimeException("Un support");
+            new HttpsConnection(req, socket.getOutputStream(), proxy);
         } else {
             HttpConnection conn = new HttpConnection(req, proxy);
             try {

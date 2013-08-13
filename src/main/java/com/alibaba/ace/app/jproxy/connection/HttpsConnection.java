@@ -10,7 +10,6 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -42,7 +41,6 @@ public class HttpsConnection {
 
     private void redirectIO() throws IOException {
         IORedirector client2Server = new IORedirector(req.getContent(), socket.getOutputStream());
-
         IORedirector server2Client = new IORedirector(socket.getInputStream(), clientOutputStream);
         client2Server.start();
         server2Client.start();
@@ -52,6 +50,8 @@ public class HttpsConnection {
             server2Client.join();
         } catch (Exception e) {
             throw new ProxyException(e.getMessage(), e);
+        } finally {
+            socket.close();
         }
 
     }
@@ -77,9 +77,6 @@ public class HttpsConnection {
                 os.flush();
             } catch (IOException e) {
                 throw new ProxyException(e.getMessage(), e);
-            } finally {
-                IOUtils.closeQuietly(this.is);
-                IOUtils.closeQuietly(this.os);
             }
         }
     }
@@ -113,7 +110,7 @@ public class HttpsConnection {
             throw new ProxyException("set timeout error", e);
         }
         try {
-            socket.connect(address, 3 * 1000);
+            socket.connect(address, 15 * 1000);
         } catch (ConnectException e) {
             throw new ProxyException("can't not connet to " + address + ". " + e.getMessage(), e);
         } catch (SocketTimeoutException ste) {
