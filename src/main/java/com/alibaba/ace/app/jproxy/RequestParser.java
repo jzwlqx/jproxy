@@ -3,62 +3,70 @@ package com.alibaba.ace.app.jproxy;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.alibaba.ace.app.jproxy.exception.BadRequestException;
+import com.alibaba.ace.app.jproxy.model.HttpMessage;
 import com.alibaba.ace.app.jproxy.model.HttpRequest;
-import com.alibaba.ace.app.jproxy.model.HttpRequest.Header;
 
 public class RequestParser {
     private static Log log = LogFactory.getLog(RequestParser.class);
 
+    private static enum Stage {
+        HEADLINE,
+        HEADER
+    }
+
     /**
      * 从InputStream读取，解析成HttpRequest对象。如果是post请求，InputStream中剩下的部分（request
-     * body）不会解析
+     * body）不会解析.
      * 
      * @param is
-     * @return
+     * @return HttpRequest对象。如果流已经关闭，返回null
      * @throws IOException
+     * @throws BadRequestException 如果不是期望的解析格式
      */
     public static HttpRequest parse(InputStream is) throws IOException {
-        HttpRequest req = new HttpRequest();
-        parseFirstLine(is, req);
-        parseHeaders(is, req);
-        if ("post".equalsIgnoreCase(req.getMethod())) {
-            req.setBody(is);
-        }
-        return req;
-    }
-
-    private static void parseHeaders(InputStream is, HttpRequest req) throws IOException {
         String line = null;
-        List<Header> headerList = new ArrayList<Header>();
-        while (!(line = ensureReadLine(is)).isEmpty()) {
-            Header h = parseHeader(line);
-            headerList.add(h);
+        Stage stage = Stage.HEADLINE;
+        HttpRequest request = new HttpRequest();
+        for (;;) {
+            line = readLine(is);
+            switch (stage) {
+                case HEADLINE:
+                    if (line == null)
+                        return null;
+                    parseFirstLine(line, request);
+                    stage = Stage.HEADER;
+                    break;
+                case HEADER:
+                    if (line.equals("\r\n")) {
+                        return request;
+                    } else {
+                        parseHeader(line, request);
+                    }
+            }
         }
-        req.setHeaders(headerList);
     }
 
-    private static Header parseHeader(String line) {
-        String[] arr = line.split(":");
+    private static void parseHeader(String line, HttpRequest request) {
+        line = ensureLine(line);
+        String[] arr = line.split(":", 2);
         if (arr.length != 2) {
             throw new BadRequestException(line + " is not valid http header.");
         }
         String key = arr[0].trim();
         String value = arr[1].trim();
-        Header h = new Header();
+        HttpMessage.Header h = new HttpMessage.Header();
         h.setName(key);
         h.setValue(value);
-        return h;
+        request.addHeader(h);
     }
 
-    private static void parseFirstLine(InputStream is, HttpRequest req) throws IOException {
-        String line = ensureReadLine(is);
+    private static void parseFirstLine(String line, HttpRequest req) throws IOException {
+        line = ensureLine(line);
         String[] arr = line.split("\\s+", 3);
         if (arr.length != 3) {
             //TODO 考虑宽容的解析
@@ -76,15 +84,13 @@ public class RequestParser {
     }
 
     /**
-     * 读取一个一行，并且验证行以\r\n结尾，否则抛出异常。
+     * 确认行尾以\r\n结尾并去除之。
      * 
-     * @param is
-     * @return 去掉\r\n之后的行
-     * @throws IOException
+     * @param line
+     * @return 去除\r\n之后的字符串
      */
-    private static String ensureReadLine(InputStream is) throws IOException {
-        String line = readLine(is);
-        if (!line.endsWith("\r\n")) {
+    protected static String ensureLine(String line) {
+        if (line == null || !line.endsWith("\r\n")) {
             throw new BadRequestException(line + " not end with \r\n");
         }
         return line.substring(0, line.length() - 2);
@@ -94,7 +100,7 @@ public class RequestParser {
      * 读取\r\n分割的一行
      * 
      * @param is
-     * @return 没有去除\r\n的解析结果
+     * @return 没有去除\r\n的解析结果. 如果已经到结束，返回null
      * @throws IOException
      */
     private static String readLine(InputStream is) throws IOException {
@@ -121,6 +127,6 @@ public class RequestParser {
                     os.write(b);
             }
         }
-        return new String(os.toByteArray(), "ISO-8859-1");
+        return os.size() > 0 ? new String(os.toByteArray(), "ISO-8859-1") : null;
     }
 }

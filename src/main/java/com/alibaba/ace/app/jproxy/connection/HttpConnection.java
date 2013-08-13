@@ -1,10 +1,6 @@
 package com.alibaba.ace.app.jproxy.connection;
 
-import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
@@ -20,9 +16,11 @@ import org.apache.commons.logging.LogFactory;
 
 import com.alibaba.ace.app.jproxy.exception.BadRequestException;
 import com.alibaba.ace.app.jproxy.exception.ProxyException;
+import com.alibaba.ace.app.jproxy.model.HttpMessage;
 import com.alibaba.ace.app.jproxy.model.HttpRequest;
-import com.alibaba.ace.app.jproxy.model.HttpRequest.Header;
+import com.alibaba.ace.app.jproxy.model.HttpResponse;
 import com.alibaba.ace.app.jproxy.model.Proxy;
+import com.alibaba.ace.app.jproxy.parser.HttpResponseParser;
 
 /**
  * 就是一个connection
@@ -30,12 +28,13 @@ import com.alibaba.ace.app.jproxy.model.Proxy;
  * @author jjz
  */
 public class HttpConnection {
-    private static final Log log = LogFactory.getLog(HttpConnection.class);
-    private Proxy            proxy;
-    private HttpRequest      req;
-    private Socket           socket;
-    private URL              url;
-    private OutputStream     os;
+    private static final Log  log = LogFactory.getLog(HttpConnection.class);
+
+    private Proxy             proxy;
+    private HttpRequest       req;
+    private Socket            socket;
+    private URL               url;
+    private InetSocketAddress address;
 
     public HttpConnection(HttpRequest req, Proxy proxy) {
         this.req = req;
@@ -49,7 +48,55 @@ public class HttpConnection {
         }
     }
 
-    public void connect() {
+    /**
+     * 发送请求并且拿到响应
+     * 
+     * @return
+     * @throws IOException
+     */
+    public HttpResponse request() throws IOException {
+        req = createRequest();
+        connect();
+        req.send(socket.getOutputStream());
+        HttpResponseParser parser = new HttpResponseParser();
+        return parser.parse(socket.getInputStream());
+    }
+
+    /**
+     * 规整请求里的信息
+     * 
+     * @return
+     */
+    private HttpRequest createRequest() {
+        req.removeHeader("Proxy-Connection");
+        if (this.proxy == null) {
+            req.setUrl(buildURI(url));
+            req.addHeader(new HttpMessage.Header("Connection", "close"));
+        } else {
+            req.addHeader(new HttpMessage.Header("Proxy-Connection", "close"));
+        }
+        return req;
+    }
+
+    private String buildURI(URL url) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(url.getPath());
+        if (StringUtils.isNotEmpty(url.getQuery())) {
+            sb.append("?");
+            sb.append(url.getQuery());
+        }
+        if (StringUtils.isNotEmpty(url.getRef())) {
+            sb.append("#");
+            sb.append(url.getRef());
+        }
+        return sb.toString();
+    }
+
+    public void close() {
+        IOUtils.closeQuietly(socket);
+    }
+
+    private void connect() {
         String host = null;
         int port = -1;
         if (this.proxy != null) {
@@ -71,7 +118,6 @@ public class HttpConnection {
         }
         try {
             socket.connect(address, 3 * 1000);
-            os = new BufferedOutputStream(socket.getOutputStream());
         } catch (ConnectException e) {
             throw new ProxyException("can't not connet to " + address + ". " + e.getMessage(), e);
 
@@ -79,79 +125,6 @@ public class HttpConnection {
             throw new ProxyException("connect to " + address + " timeout. " + ste.getMessage(), ste);
         } catch (IOException e) {
             throw new ProxyException("inner io error. " + e.getMessage(), e);
-        }
-    }
-
-    public void sendRequest() {
-        String uri = null;
-        if (this.proxy != null) {
-            uri = this.req.getUrl();
-        } else {
-            uri = buildURI(url);
-        }
-
-        try {
-            writeRequestLine(req.getMethod(), uri, "HTTP/1.1");
-            for (Header h : req.getHeaders()) {
-                writeHeader(h);
-            }
-            writeLine(null);
-
-            if (req.getBody() != null) {
-                IOUtils.copy(req.getBody(), os);
-            }
-            os.flush();
-        } catch (Exception e) {
-            throw new ProxyException("internal error", e);
-        }
-    }
-
-    private void writeRequestLine(String method, String uri, String protocol)
-            throws UnsupportedEncodingException, IOException {
-        StringBuilder sb = new StringBuilder();
-        sb.append(method).append(" ").append(uri).append(" ").append(protocol);
-        writeLine(sb.toString());
-    }
-
-    private String buildURI(URL url) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(url.getPath());
-        if (StringUtils.isNotEmpty(url.getQuery())) {
-            sb.append("?");
-            sb.append(url.getQuery());
-        }
-        if (StringUtils.isNotEmpty(url.getRef())) {
-            sb.append("#");
-            sb.append(url.getRef());
-        }
-        return sb.toString();
-    }
-
-    private void writeLine(String line) throws UnsupportedEncodingException, IOException {
-        if (log.isDebugEnabled()) {
-            log.debug("send: " + line);
-        }
-        if (line != null) {
-            os.write(line.getBytes("ISO-8859-1"));
-        }
-        os.write("\r\n".getBytes("ISO-8859-1"));
-    }
-
-    private void writeHeader(Header header) throws UnsupportedEncodingException, IOException {
-        writeLine(header.toString());
-    }
-
-    /**
-     * 连接并且发送请求后调用
-     * 
-     * @return
-     * @throws IOException
-     */
-    public InputStream getInputStream() {
-        try {
-            return socket.getInputStream();
-        } catch (IOException e) {
-            throw new ProxyException("innert io error", e);
         }
     }
 }

@@ -16,6 +16,7 @@ public class SimpleRequest {
         System.setProperty("http.proxyPort", "10000");
 
         URL url = new URL("http://www.google.com/");
+        //URL url = new URL("http://www.alibaba.com/");
 
         String s = IOUtils.toString(url.openStream());
         System.out.println(s);
