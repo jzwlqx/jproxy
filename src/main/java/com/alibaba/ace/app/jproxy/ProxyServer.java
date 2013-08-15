@@ -7,18 +7,19 @@ import java.net.Socket;
 public class ProxyServer {
 
     public static void main(String[] args) throws IOException {
-        ServerSocket serverSocket = null;
-
-        int port = 10000; //default
-        try {
-            port = Integer.parseInt(args[0]);
-        } catch (Exception e) {
-            //ignore me
+        int port = 10080; //default
+        if (args.length > 0) {
+            try {
+                port = Integer.parseInt(args[0]);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Illegal port " + args[0]);
+            }
         }
 
+        ServerSocket serverSocket = null;
         try {
             serverSocket = new ServerSocket(port);
-            System.out.println("Started on: " + port);
+            System.out.println("Http proxy started on port " + port);
         } catch (IOException e) {
             System.err.println("Could not listen on port: " + port);
             System.exit(-1);
