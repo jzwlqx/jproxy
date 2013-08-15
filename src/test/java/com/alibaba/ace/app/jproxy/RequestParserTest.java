@@ -15,6 +15,5 @@ public class RequestParserTest {
         String headers = "GET / HTTP/1.1\r\nHost: cn.bing.com\r\nConnection: keep-alive\r\n\r\n";
         HttpRequest req = RequestParser.parse(new ByteArrayInputStream(headers.getBytes()));
         Assert.assertEquals("GET", req.getMethod());
-
     }
 }
