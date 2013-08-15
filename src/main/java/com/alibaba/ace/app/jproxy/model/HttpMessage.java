@@ -92,7 +92,7 @@ public abstract class HttpMessage {
             Header h = it.next();
             if (h.getName().equals(name)) {
                 it.remove();
-                headerMap.remove(name);
+                headerMap.remove(name.toLowerCase());
             }
         }
 
@@ -111,16 +111,16 @@ public abstract class HttpMessage {
     }
 
     public long getContentLength() {
-        String value = headerMap.get("Content-Length");
+        String value = getHeader("Content-Length");
         return value == null ? -1 : Long.parseLong(value);
     }
 
     public String getHeader(String name) {
-        return headerMap.get(name);
+        return headerMap.get(name.toLowerCase());
     }
 
     public boolean isChunked() {
-        String transferEncoding = headerMap.get("Transfer-Encoding");
+        String transferEncoding = getHeader("Transfer-Encoding");
         return transferEncoding != null && transferEncoding.toLowerCase().equals("chunked");
     }
 
@@ -132,7 +132,7 @@ public abstract class HttpMessage {
             headerMap = new HashMap<String, String>();
         }
         headers.add(header);
-        headerMap.put(header.getName(), header.getValue());
+        headerMap.put(header.getName().toLowerCase(), header.getValue());
     }
 
     /**

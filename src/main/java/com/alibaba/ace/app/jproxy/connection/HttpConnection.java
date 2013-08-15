@@ -28,13 +28,12 @@ import com.alibaba.ace.app.jproxy.parser.HttpResponseParser;
  * @author jjz
  */
 public class HttpConnection {
-    private static final Log  log = LogFactory.getLog(HttpConnection.class);
+    private static final Log log = LogFactory.getLog(HttpConnection.class);
 
-    private Proxy             proxy;
-    private HttpRequest       req;
-    private Socket            socket;
-    private URL               url;
-    private InetSocketAddress address;
+    private Proxy            proxy;
+    private HttpRequest      req;
+    private Socket           socket;
+    private URL              url;
 
     public HttpConnection(HttpRequest req, Proxy proxy) {
         this.req = req;
@@ -110,6 +109,9 @@ public class HttpConnection {
             port = url.getPort() > 0 ? url.getPort() : url.getDefaultPort();
         }
         InetSocketAddress address = new InetSocketAddress(host, port);
+        if (log.isDebugEnabled()) {
+            log.debug("try connect to " + address);
+        }
         socket = new Socket();
         try {
             socket.setSoTimeout(20 * 1000);
